@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taxis PDC</title>
+<style>
+  :root {
+    --primary: #1a73e8;
+    --primary-dark: #1557b0;
+    --success: #34a853;
+    --warning: #fbbc04;
+    --danger: #ea4335;
+    --gray: #5f6368;
+    --light: #f8f9fa;
+    --border: #dadce0;
+    --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.24);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #202124; min-height: 100vh; }
+
+  /* ── NAV ── */
+  .navbar {
+    background: var(--primary);
+    color: white;
+    padding: 0 20px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .navbar-brand { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+  .navbar-user { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+  .badge-perfil {
+    background: rgba(255,255,255,.25);
+    border: 1px solid rgba(255,255,255,.5);
+    padding: 2px 10px; border-radius: 12px; font-size: 12px;
+  }
+  .btn-logout { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.4);
+    color: white; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .btn-logout:hover { background: rgba(255,255,255,.25); }
+
+  /* ── TABS ── */
+  .tabs { display: flex; background: white; border-bottom: 2px solid var(--border); overflow-x: auto; }
+  .tab {
+    padding: 14px 20px; cursor: pointer; font-size: 14px; font-weight: 500;
+    color: var(--gray); border-bottom: 3px solid transparent; white-space: nowrap;
+    transition: all .2s;
+  }
+  .tab:hover { color: var(--primary); background: #f5f5f5; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── CONTENT ── */
+  .page { display: none; }
+  .page.active { display: block; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── CARD ── */
+  .card { background: white; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+  .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+  .card-body { padding: 20px; }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 13px; font-weight: 500; color: var(--gray); }
+  .form-group input, .form-group select, .form-group textarea {
+    border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    font-size: 14px; transition: border-color .2s; outline: none;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
+  .form-group.full { grid-column: 1/-1; }
+
+  /* ── BUTTONS ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all .2s; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #2d9249; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { background: #c5221f; }
+  .btn-warning { background: var(--warning); color: #333; }
+  .btn-warning:hover { background: #f9a825; }
+  .btn-outline { background: white; color: var(--primary); border: 1px solid var(--primary); }
+  .btn-outline:hover { background: #e8f0fe; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-weight: 600; color: var(--gray); border-bottom: 2px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:hover td { background: #fafafa; }
+
+  /* ── ESTADO BADGES ── */
+  .estado {
+    display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .estado-proceso    { background: #fff3e0; color: #e65100; }
+  .estado-resp       { background: #e3f2fd; color: #1565c0; }
+  .estado-valid      { background: #e8f5e9; color: #2e7d32; }
+  .estado-ejecutado  { background: #ede7f6; color: #4527a0; }
+  .estado-cancelado  { background: #fce4ec; color: #880e4f; }
+  .estado-rechazado  { background: #ffebee; color: #b71c1c; }
+
+  /* ── LOGIN ── */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); }
+  .login-card { background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.2); padding: 40px; width: 100%; max-width: 380px; }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo h1 { font-size: 26px; color: var(--primary); font-weight: 700; }
+  .login-logo p { color: var(--gray); font-size: 14px; margin-top: 4px; }
+
+  /* ── ALERTS ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; }
+  .alert-error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+  .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .alert-info { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+
+  /* ── MODAL ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,.25); }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray); }
+  .modal-body { padding: 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+  /* ── FILTERS ── */
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; align-items: flex-end; }
+  .filters .form-group { min-width: 150px; margin: 0; }
+
+  /* ── STATS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: var(--shadow); }
+  .stat-number { font-size: 32px; font-weight: 700; color: var(--primary); }
+  .stat-label { font-size: 12px; color: var(--gray); margin-top: 4px; }
+
+  /* ── SPINNER ── */
+  .spinner { border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; width: 24px; height: 24px; animation: spin .8s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-msg { text-align: center; padding: 40px; color: var(--gray); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .container { padding: 16px 10px; }
+    .tab { padding: 12px 14px; font-size: 13px; }
+  }
+
+  .text-muted { color: var(--gray); font-size: 12px; }
+  .mt-2 { margin-top: 8px; }
+  .d-flex { display: flex; }
+  .gap-2 { gap: 8px; }
+  .hidden { display: none !important; }
+  .actions-col { display: flex; gap: 4px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="loginPage" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="Logo.jpeg" alt="Packing del Carmen" style="width:130px;height:130px;border-radius:16px;object-fit:contain;background:#f0f4f8;padding:8px;margin-bottom:16px;box-shadow:0 4px 12px rgba(26,115,232,.15)">
+      <h1>Taxis PDC</h1>
+      <p>Sistema de Solicitud de Taxis</p>
+    </div>
+    <div id="loginAlert"></div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Usuario</label>
+      <input type="text" id="inpUser" placeholder="Ingrese su usuario" autocomplete="username">
+    </div>
+    <div class="form-group" style="margin-bottom:24px">
+      <label>Contraseña</label>
+      <input type="password" id="inpPass" placeholder="Ingrese su contraseña" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">
+      Ingresar
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="appPage" class="hidden">
+  <nav class="navbar">
+    <div class="navbar-brand"><img src="Logo.jpeg" alt="PDC" style="height:40px;width:40px;border-radius:8px;object-fit:contain;background:white;padding:2px;margin-right:10px;vertical-align:middle;"><span style="vertical-align:middle">Taxis PDC</span></div>
+    <div class="navbar-user">
+      <span id="navNombre"></span>
+      <span class="badge-perfil" id="navPerfil"></span>
+      <button class="btn-logout" onclick="logout()">Salir</button>
+    </div>
+  </nav>
+  <div class="tabs" id="tabsBar"></div>
+
+  <!-- PÁGINA: SOLICITAR TAXI -->
+  <div class="page" id="pgSolicitar">
+    <div class="container">
+      <div class="card">
+        <div class="card-header">Nueva Solicitud de Taxi</div>
+        <div class="card-body">
+          <div id="solAlert"></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Solicitante</label>
+              <input type="text" id="solNombre" readonly>
+            </div>
+            <div class="form-group">
+              <label>Jefatura asignada</label>
+              <input type="text" id="solJefNombre" readonly>
+            </div>
+            <div class="form-group">
+              <label>Responsable aprobador</label>
+              <input type="text" id="solRespNombre" readonly>
+            </div>
+            <div class="form-group">
+              <label>Punto de partida *</label>
+              <input type="text" id="solOrigen" placeholder="Ej: Oficina principal - Jr. Lima 123">
+            </div>
+            <div class="form-group">
+              <label>Punto de llegada *</label>
+              <input type="text" id="solDestino" placeholder="Ej: Aeropuerto Jorge Chávez">
+            </div>
+            <div class="form-group">
+              <label>Fecha de servicio *</label>
+              <input type="date" id="solFecha">
+            </div>
+            <div class="form-group">
+              <label>Hora de servicio *</label>
+              <input type="time" id="solHora">
+            </div>
+          </div>
+          <div style="margin-top:20px">
+            <button class="btn btn-primary" onclick="enviarSolicitud()">Enviar Solicitud</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mis solicitudes en esta sección -->
+      <div class="card">
+        <div class="card-header">
+          Mis Solicitudes
+          <button class="btn btn-outline btn-sm" onclick="cargarMisSolicitudes()">↻ Actualizar</button>
+        </div>
+        <div class="card-body">
+          <div id="misSolAlert"></div>
+          <div class="table-wrap">
+            <table id="tblMisSol">
+              <thead>
+                <tr>
+                  <th>ID</th><th>F. Solicitud</th><th>Origen</th><th>Destino</th>
+                  <th>F. Servicio</th><th>Hora</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bodyMisSol"><tr><td colspan="8" class="loading-msg"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PÁGINA: APROBACIÓN RESPONSABLE -->
+  <div class="page" id="pgResponsable">
+    <div class="container">
+      <div class="stats-grid" id="statsResp"></div>
+      <div class="card">
+        <div class="card-header">
+          Solicitudes Pendientes de Aprobación
+          <button class="btn btn-outline btn-sm" onclick="cargarPendientesResp()">↻ Actualizar</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Solicitante</th><th>Jefatura</th><th>Origen</th><th>Destino</th>
+                  <th>F. Servicio</th><th>Hora</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bodyResp"><tr><td colspan="9" class="loading-msg"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PÁGINA: APROBACIÓN VALIDADOR -->
+  <div class="page" id="pgValidador">
+    <div class="container">
+      <div class="stats-grid" id="statsValid"></div>
+      <div class="card">
+        <div class="card-header">
+          Solicitudes para Validación
+          <button class="btn btn-outline btn-sm" onclick="cargarPendientesValid()">↻ Actualizar</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Solicitante</th><th>Responsable</th><th>Origen</th><th>Destino</th>
+                  <th>F. Servicio</th><th>Hora</th><th>Aprob. Resp.</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bodyValid"><tr><td colspan="10" class="loading-msg"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PÁGINA: CONTROL / GARITA -->
+  <div class="page" id="pgControl">
+    <div class="container">
+      <div class="stats-grid" id="statsControl"></div>
+      <div class="card">
+        <div class="card-header">
+          Servicios Aprobados para Ejecutar
+          <button class="btn btn-outline btn-sm" onclick="cargarControl()">↻ Actualizar</button>
+        </div>
+        <div class="card-body">
+          <div class="filters">
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="filtroEstadoControl" onchange="cargarControl()">
+                <option value="Todos">Todos</option>
+                <option value="Aprob Validador" selected>Aprob Validador</option>
+                <option value="Ejecutado">Ejecutado</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Solicitante</th><th>Origen</th><th>Destino</th>
+                  <th>F. Servicio</th><th>Hora</th><th>Estado</th><th>Chofer</th><th>Placa</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bodyControl"><tr><td colspan="10" class="loading-msg"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PÁGINA: PROVEEDOR -->
+  <div class="page" id="pgProveedor">
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          Servicios Ejecutados - Registro de Costos
+          <button class="btn btn-outline btn-sm" onclick="cargarProveedor()">↻ Actualizar</button>
+        </div>
+        <div class="card-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Solicitante</th><th>Origen</th><th>Destino</th>
+                  <th>F. Servicio</th><th>F. Ejecución</th><th>Chofer</th><th>Placa</th><th>Costo (S/.)</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bodyProv"><tr><td colspan="10" class="loading-msg"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PÁGINA: ADMINISTRADOR - USUARIOS -->
+  <div class="page" id="pgAdmin">
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          Gestión de Usuarios
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline btn-sm" onclick="cargarUsuarios()">↻ Actualizar</button>
+            <button class="btn btn-primary btn-sm" onclick="abrirModalUsuario(null)">+ Nuevo usuario</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th><th>Username</th><th>Perfil</th>
+                  <th>Jefatura Asignada</th><th>Responsable Asignado</th>
+                  <th>Descarga</th><th>Activo</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bodyAdmin"><tr><td colspan="8" class="loading-msg"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel todas las solicitudes para admin -->
+      <div class="card">
+        <div class="card-header">
+          Todas las Solicitudes
+          <button class="btn btn-outline btn-sm" onclick="cargarTodasSolicitudes()">↻ Actualizar</button>
+        </div>
+        <div class="card-body">
+          <div class="filters">
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="filtroEstadoAdmin" onchange="cargarTodasSolicitudes()">
+                <option value="Todos">Todos</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="Aprob Responsable">Aprob Responsable</option>
+                <option value="Aprob Validador">Aprob Validador</option>
+                <option value="Ejecutado">Ejecutado</option>
+                <option value="Cancelado">Cancelado</option>
+                <option value="Rechazado">Rechazado</option>
+                <option value="Anulado">Anulado</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Solicitante</th><th>Responsable</th><th>Origen</th><th>Destino</th>
+                  <th>F. Servicio</th><th>Estado</th><th>Costo</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="bodyAdminSol"><tr><td colspan="9" class="loading-msg"><div class="spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PÁGINA: REPORTE -->
+  <div class="page" id="pgReporte">
+    <div class="container">
+      <div class="card">
+        <div class="card-header">Descargar Reporte Excel</div>
+        <div class="card-body">
+          <div id="repAlert"></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Fecha desde *</label>
+              <input type="date" id="repDesde">
+            </div>
+            <div class="form-group">
+              <label>Fecha hasta *</label>
+              <input type="date" id="repHasta">
+            </div>
+          </div>
+          <div style="margin-top:20px">
+            <button class="btn btn-success" onclick="generarReporte()">⬇ Descargar Excel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODALES ══════════════ -->
+
+<!-- Modal: Detalle de solicitud -->
+<div class="modal-overlay" id="modalDetalle">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Detalle de Solicitud</h3>
+      <button class="modal-close" onclick="cerrarModal('modalDetalle')">✕</button>
+    </div>
+    <div class="modal-body" id="detalleBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Aprobación / Rechazo responsable -->
+<div class="modal-overlay" id="modalAprobarResp">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="titleAprobarResp">Aprobación Responsable</h3>
+      <button class="modal-close" onclick="cerrarModal('modalAprobarResp')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="aprobarRespAlert"></div>
+      <p id="txtAprobarResp" style="margin-bottom:16px;color:var(--gray)"></p>
+      <div class="form-group" id="motivoRespGrp" class="hidden">
+        <label>Motivo del rechazo</label>
+        <textarea id="motivoResp" rows="3" placeholder="Ingrese el motivo..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modalAprobarResp')">Cancelar</button>
+      <button class="btn" id="btnConfirmResp" onclick="confirmarAccionResp()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Aprobación / Rechazo validador -->
+<div class="modal-overlay" id="modalAprobarValid">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="titleAprobarValid">Aprobación Validador</h3>
+      <button class="modal-close" onclick="cerrarModal('modalAprobarValid')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="aprobarValidAlert"></div>
+      <p id="txtAprobarValid" style="margin-bottom:16px;color:var(--gray)"></p>
+      <div class="form-group" id="motivoValidGrp">
+        <label>Motivo del rechazo (solo si rechaza)</label>
+        <textarea id="motivoValid" rows="3" placeholder="Ingrese el motivo..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modalAprobarValid')">Cancelar</button>
+      <button class="btn" id="btnConfirmValid" onclick="confirmarAccionValid()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ejecutar servicio (Control) -->
+<div class="modal-overlay" id="modalEjecutar">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Ejecutar Servicio</h3>
+      <button class="modal-close" onclick="cerrarModal('modalEjecutar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ejecutarAlert"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Fecha de ejecución *</label>
+          <input type="date" id="ejFecha">
+        </div>
+        <div class="form-group">
+          <label>Hora de ejecución *</label>
+          <input type="time" id="ejHora">
+        </div>
+        <div class="form-group">
+          <label>Chofer *</label>
+          <input type="text" id="ejChofer" placeholder="Nombre del chofer">
+        </div>
+        <div class="form-group">
+          <label>Placa *</label>
+          <input type="text" id="ejPlaca" placeholder="Ej: ABC-123">
+        </div>
+        <div class="form-group full">
+          <label>Observaciones</label>
+          <textarea id="ejObs" rows="3" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modalEjecutar')">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarEjecucion()">Confirmar Ejecución</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Costo proveedor -->
+<div class="modal-overlay" id="modalCosto">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Registrar Costo</h3>
+      <button class="modal-close" onclick="cerrarModal('modalCosto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="costoAlert"></div>
+      <div class="form-group">
+        <label>Costo del servicio (S/.) *</label>
+        <input type="number" id="inpCosto" step="0.01" min="0" placeholder="0.00">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modalCosto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCosto()">Guardar Costo</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Anular servicio -->
+<div class="modal-overlay" id="modalAnular">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Anular Servicio</h3>
+      <button class="modal-close" onclick="cerrarModal('modalAnular')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="anularAlert"></div>
+      <p style="margin-bottom:16px;color:var(--gray)">Esta acción anulará el servicio independientemente de su estado actual. Ingresa el motivo:</p>
+      <div class="form-group">
+        <label>Motivo de anulación *</label>
+        <textarea id="motivoAnular" rows="3" placeholder="Motivo de la anulación..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modalAnular')">Cancelar</button>
+      <button class="btn btn-warning" onclick="confirmarAnular()">Confirmar Anulación</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Gestión de usuario (Admin) -->
+<div class="modal-overlay" id="modalUsuario">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="titleModalUsuario">Nuevo Usuario</h3>
+      <button class="modal-close" onclick="cerrarModal('modalUsuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="usuarioAlert"></div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nombre completo *</label>
+          <input type="text" id="usrNombre" placeholder="Nombre completo">
+        </div>
+        <div class="form-group">
+          <label>Username *</label>
+          <input type="text" id="usrUsername" placeholder="usuario123">
+        </div>
+        <div class="form-group">
+          <label>Contraseña *</label>
+          <input type="text" id="usrPassword" placeholder="Contraseña">
+        </div>
+        <div class="form-group">
+          <label>Perfil *</label>
+          <select id="usrPerfil" onchange="onPerfilChange()">
+            <option value="">-- Seleccione --</option>
+            <option>Usuario</option>
+            <option>Jefatura</option>
+            <option>Responsable</option>
+            <option>Validador</option>
+            <option>Control</option>
+            <option>Proveedor</option>
+            <option>Administrador</option>
+          </select>
+        </div>
+        <div class="form-group" id="grpJefatura">
+          <label>Jefatura asignada</label>
+          <select id="usrJefatura" onchange="onJefaturaChange()">
+            <option value="">-- Ninguna --</option>
+          </select>
+        </div>
+        <div class="form-group" id="grpResponsable">
+          <label>Responsable asignado</label>
+          <select id="usrResponsable">
+            <option value="">-- Ninguno --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>¿Puede descargar reporte?</label>
+          <select id="usrDescargar">
+            <option value="false">No</option>
+            <option value="true">Sí</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Activo</label>
+          <select id="usrActivo">
+            <option value="true">Sí</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modalUsuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// CONFIGURACIÓN
+// ──────────────────────────────────────────────
+// ⚠️ REEMPLAZA con la URL de tu Google Apps Script desplegado
+const API_URL = 'https://script.google.com/macros/s/AKfycbysAneegWV_EBzGi7IRA75ONDec4pEcDIBZCIK_ofp16kxk8mkeGsZgRxM6qCNEXVla/exec';
+
+// ──────────────────────────────────────────────
+// ESTADO GLOBAL
+// ──────────────────────────────────────────────
+let usuario = null;          // usuario logueado
+let catalogos = {};          // jefaturas, responsables
+let accionRespActual = null; // {action, solicitudId}
+let accionValidActual = null;
+let solicitudEjecutar = null;
+let solicitudCosto = null;
+let usuarioEditando = null;  // para modal admin
+
+// ──────────────────────────────────────────────
+// UTILIDADES
+// ──────────────────────────────────────────────
+async function api(params) {
+  const resp = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(params)
+  });
+  return resp.json();
+}
+
+function fmtHora(val) {
+  if (!val) return '—';
+  const s = String(val);
+  // Google Sheets serializa horas como "1899-12-30THH:MM:SS.000Z"
+  if (s.includes('T')) return s.substring(11, 16);
+  return s.substring(0, 5) || '—';
+}
+
+function fmtFecha(val) {
+  if (!val) return '—';
+  const d = new Date(val);
+  if (isNaN(d)) return val;
+  return d.toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function estadoBadge(estado) {
+  const clases = {
+    'En Proceso': 'estado-proceso',
+    'Aprob Responsable': 'estado-resp',
+    'Aprob Validador': 'estado-valid',
+    'Ejecutado': 'estado-ejecutado',
+    'Cancelado': 'estado-cancelado',
+    'Rechazado': 'estado-rechazado',
+    'Rechazado Validador': 'estado-rechazado',
+    'Anulado': 'estado-cancelado'
+  };
+  const cls = clases[estado] || 'estado-proceso';
+  return `<span class="estado ${cls}">${estado || '—'}</span>`;
+}
+
+function showAlert(id, msg, tipo='error') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-${tipo}">${msg}</div>`;
+  setTimeout(() => { el.innerHTML = ''; }, 5000);
+}
+
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ──────────────────────────────────────────────
+// LOGIN / LOGOUT
+// ──────────────────────────────────────────────
+document.getElementById('inpPass').addEventListener('keypress', e => { if(e.key === 'Enter') doLogin(); });
+
+async function doLogin() {
+  const username = document.getElementById('inpUser').value.trim();
+  const password = document.getElementById('inpPass').value;
+  if (!username || !password) { showAlert('loginAlert', 'Ingrese usuario y contraseña'); return; }
+
+  document.getElementById('loginAlert').innerHTML = '<div class="alert alert-info">Verificando...</div>';
+  const res = await api({ action: 'login', username, password });
+  if (!res.ok) { showAlert('loginAlert', res.error || 'Error de acceso'); return; }
+
+  usuario = res.usuario;
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('appPage').classList.remove('hidden');
+  document.getElementById('navNombre').textContent = usuario.nombre;
+  document.getElementById('navPerfil').textContent = usuario.perfil;
+
+  await cargarCatalogos();
+  construirTabs();
+  inicializarSolicitar();
+}
+
+function logout() {
+  usuario = null;
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('appPage').classList.add('hidden');
+  document.getElementById('inpUser').value = '';
+  document.getElementById('inpPass').value = '';
+  document.getElementById('loginAlert').innerHTML = '';
+}
+
+// ──────────────────────────────────────────────
+// CATÁLOGOS
+// ──────────────────────────────────────────────
+async function cargarCatalogos() {
+  const res = await api({ action: 'getCatalogos' });
+  if (res.ok) catalogos = res;
+}
+
+// ──────────────────────────────────────────────
+// TABS POR ROL
+// ──────────────────────────────────────────────
+const TABS_CONFIG = {
+  'Usuario':       [{ id:'pgSolicitar',  label:'✍ Solicitar / Mis Servicios' }],
+  'Jefatura':      [{ id:'pgSolicitar',  label:'✍ Solicitar / Mis Servicios' }],
+  'Responsable':   [{ id:'pgSolicitar',  label:'✍ Solicitar / Mis Servicios' }, { id:'pgResponsable', label:'✅ Aprobación' }],
+  'Validador':     [{ id:'pgSolicitar',  label:'✍ Solicitar / Mis Servicios' }, { id:'pgValidador',  label:'✅ Validación' }],
+  'Control':       [{ id:'pgControl',    label:'🚗 Control / Garita' }],
+  'Proveedor':     [{ id:'pgProveedor',  label:'💰 Costos' }],
+  'Administrador': [
+    { id:'pgSolicitar',  label:'✍ Solicitar' },
+    { id:'pgResponsable',label:'✅ Responsable' },
+    { id:'pgValidador',  label:'✅ Validador' },
+    { id:'pgControl',    label:'🚗 Control' },
+    { id:'pgProveedor',  label:'💰 Proveedor' },
+    { id:'pgAdmin',      label:'⚙ Administración' }
+  ]
+};
+
+// Agregar pestaña de reporte a perfiles con descarga
+function construirTabs() {
+  const perfil = usuario.perfil;
+  let tabs = [...(TABS_CONFIG[perfil] || TABS_CONFIG['Usuario'])];
+  if (usuario.puedeDescargar || perfil === 'Administrador') {
+    tabs.push({ id:'pgReporte', label:'📊 Reporte' });
+  }
+
+  const bar = document.getElementById('tabsBar');
+  bar.innerHTML = '';
+  tabs.forEach((t, i) => {
+    const div = document.createElement('div');
+    div.className = 'tab' + (i === 0 ? ' active' : '');
+    div.textContent = t.label;
+    div.dataset.page = t.id;
+    div.onclick = () => switchTab(t.id, div);
+    bar.appendChild(div);
+  });
+
+  // Mostrar primera página
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(tabs[0].id).classList.add('active');
+  cargarPaginaActiva(tabs[0].id);
+}
+
+function switchTab(pageId, tabEl) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  tabEl.classList.add('active');
+  document.getElementById(pageId).classList.add('active');
+  cargarPaginaActiva(pageId);
+}
+
+function cargarPaginaActiva(pageId) {
+  switch (pageId) {
+    case 'pgSolicitar':   cargarMisSolicitudes(); break;
+    case 'pgResponsable': cargarPendientesResp(); break;
+    case 'pgValidador':   cargarPendientesValid(); break;
+    case 'pgControl':     cargarControl(); break;
+    case 'pgProveedor':   cargarProveedor(); break;
+    case 'pgAdmin':       cargarUsuarios(); cargarTodasSolicitudes(); break;
+  }
+}
+
+// ──────────────────────────────────────────────
+// SOLICITAR TAXI
+// ──────────────────────────────────────────────
+function inicializarSolicitar() {
+  document.getElementById('solNombre').value = usuario.nombre;
+  document.getElementById('solJefNombre').value = usuario.jefaturaNombre || '(No aplica)';
+  document.getElementById('solRespNombre').value = usuario.responsableNombre || '(No aplica)';
+  // Fecha mínima = hoy
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('solFecha').min = hoy;
+}
+
+async function enviarSolicitud() {
+  const origen = document.getElementById('solOrigen').value.trim();
+  const destino = document.getElementById('solDestino').value.trim();
+  const fecha = document.getElementById('solFecha').value;
+  const hora = document.getElementById('solHora').value;
+
+  if (!origen || !destino || !fecha || !hora) {
+    showAlert('solAlert', 'Completa todos los campos requeridos (*)');
+    return;
+  }
+
+  const res = await api({
+    action: 'crearSolicitud',
+    usuarioId: usuario.id,
+    usuarioNombre: usuario.nombre,
+    jefaturaId: usuario.jefaturaId || '',
+    jefaturaNombre: usuario.jefaturaNombre || '',
+    responsableId: usuario.responsableId || '',
+    responsableNombre: usuario.responsableNombre || '',
+    origen, destino, fechaServicio: fecha, horaServicio: hora
+  });
+
+  if (!res.ok) { showAlert('solAlert', res.error || 'Error al enviar'); return; }
+
+  showAlert('solAlert', '✅ Solicitud enviada correctamente. ID: ' + res.id, 'success');
+  document.getElementById('solOrigen').value = '';
+  document.getElementById('solDestino').value = '';
+  document.getElementById('solFecha').value = '';
+  document.getElementById('solHora').value = '';
+  cargarMisSolicitudes();
+}
+
+async function cargarMisSolicitudes() {
+  const tbody = document.getElementById('bodyMisSol');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading-msg"><div class="spinner"></div></td></tr>';
+
+  const res = await api({ action: 'getSolicitudes', usuarioId: usuario.id, perfil: usuario.perfil });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="8" class="loading-msg">${res.error}</td></tr>`; return; }
+
+  // Solo mis solicitudes
+  const mias = res.solicitudes.filter(s => String(s.usuarioId) === String(usuario.id));
+  if (!mias.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-msg text-muted">Sin solicitudes</td></tr>'; return; }
+
+  tbody.innerHTML = mias.map(s => `
+    <tr>
+      <td><code>${s.id}</code></td>
+      <td>${fmtFecha(s.fechaSolicitud)}</td>
+      <td>${s.origen}</td>
+      <td>${s.destino}</td>
+      <td>${fmtFecha(s.fechaServicio)}</td>
+      <td>${fmtHora(s.horaServicio)}</td>
+      <td>${estadoBadge(s.estado)}</td>
+      <td class="actions-col">
+        <button class="btn btn-outline btn-sm" onclick="verDetalle(${JSON.stringify(s).replace(/"/g,'&quot;')})">Ver</button>
+        ${s.estado === 'En Proceso' ? `<button class="btn btn-danger btn-sm" onclick="cancelarSolicitud('${s.id}')">Cancelar</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function cancelarSolicitud(id) {
+  if (!confirm('¿Cancelar esta solicitud?')) return;
+  const res = await api({ action: 'cancelarSolicitud', solicitudId: id, usuarioId: usuario.id });
+  if (!res.ok) { showAlert('misSolAlert', res.error, 'error'); return; }
+  showAlert('misSolAlert', 'Solicitud cancelada', 'success');
+  cargarMisSolicitudes();
+}
+
+// ──────────────────────────────────────────────
+// RESPONSABLE
+// ──────────────────────────────────────────────
+async function cargarPendientesResp() {
+  const tbody = document.getElementById('bodyResp');
+  tbody.innerHTML = '<tr><td colspan="9" class="loading-msg"><div class="spinner"></div></td></tr>';
+
+  const res = await api({ action: 'getSolicitudes', usuarioId: usuario.id, perfil: usuario.perfil });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="9">${res.error}</td></tr>`; return; }
+
+  // Pendientes para el responsable = En Proceso donde él es el responsable
+  const pendientes = res.solicitudes.filter(s => s.estado === 'En Proceso' && String(s.responsableId) === String(usuario.id));
+  const stats = document.getElementById('statsResp');
+  stats.innerHTML = `
+    <div class="stat-card"><div class="stat-number">${pendientes.length}</div><div class="stat-label">Pendientes</div></div>
+    <div class="stat-card"><div class="stat-number">${res.solicitudes.filter(s=>s.estado==='Aprob Responsable').length}</div><div class="stat-label">Aprobadas</div></div>
+  `;
+
+  if (!pendientes.length) { tbody.innerHTML = '<tr><td colspan="9" class="loading-msg text-muted">Sin pendientes</td></tr>'; return; }
+
+  tbody.innerHTML = pendientes.map(s => `
+    <tr>
+      <td><code>${s.id}</code></td>
+      <td>${s.usuarioNombre}</td>
+      <td>${s.jefaturaNombre || '—'}</td>
+      <td>${s.origen}</td>
+      <td>${s.destino}</td>
+      <td>${fmtFecha(s.fechaServicio)}</td>
+      <td>${fmtHora(s.horaServicio)}</td>
+      <td>${estadoBadge(s.estado)}</td>
+      <td class="actions-col">
+        <button class="btn btn-outline btn-sm" onclick="verDetalle(${JSON.stringify(s).replace(/"/g,'&quot;')})">Ver</button>
+        <button class="btn btn-success btn-sm" onclick="abrirAprobarResp('aprobar','${s.id}')">Aprobar</button>
+        <button class="btn btn-danger btn-sm" onclick="abrirAprobarResp('rechazar','${s.id}')">Rechazar</button>
+        <button class="btn btn-warning btn-sm" onclick="abrirAnular('${s.id}')">Anular</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirAprobarResp(action, solicitudId) {
+  accionRespActual = { action, solicitudId };
+  const esAprobar = action === 'aprobar';
+  document.getElementById('titleAprobarResp').textContent = esAprobar ? 'Aprobar Solicitud' : 'Rechazar Solicitud';
+  document.getElementById('txtAprobarResp').textContent = esAprobar
+    ? '¿Confirma la aprobación de esta solicitud?'
+    : '¿Confirma el rechazo de esta solicitud?';
+  document.getElementById('motivoRespGrp').style.display = esAprobar ? 'none' : 'flex';
+  document.getElementById('motivoResp').value = '';
+  const btn = document.getElementById('btnConfirmResp');
+  btn.textContent = esAprobar ? 'Aprobar' : 'Rechazar';
+  btn.className = 'btn ' + (esAprobar ? 'btn-success' : 'btn-danger');
+  document.getElementById('aprobarRespAlert').innerHTML = '';
+  abrirModal('modalAprobarResp');
+}
+
+async function confirmarAccionResp() {
+  const { action, solicitudId } = accionRespActual;
+  const motivo = document.getElementById('motivoResp').value.trim();
+  if (action === 'rechazar' && !motivo) {
+    showAlert('aprobarRespAlert', 'Ingresa el motivo del rechazo');
+    return;
+  }
+  const actionName = action === 'aprobar' ? 'aprobarResponsable' : 'rechazarResponsable';
+  const res = await api({ action: actionName, solicitudId, aprobadorId: usuario.id, aprobadorNombre: usuario.nombre, motivo });
+  if (!res.ok) { showAlert('aprobarRespAlert', res.error); return; }
+  cerrarModal('modalAprobarResp');
+  cargarPendientesResp();
+}
+
+// ──────────────────────────────────────────────
+// VALIDADOR
+// ──────────────────────────────────────────────
+async function cargarPendientesValid() {
+  const tbody = document.getElementById('bodyValid');
+  tbody.innerHTML = '<tr><td colspan="10" class="loading-msg"><div class="spinner"></div></td></tr>';
+
+  const res = await api({ action: 'getSolicitudes', usuarioId: usuario.id, perfil: usuario.perfil });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="10">${res.error}</td></tr>`; return; }
+
+  const pendientes = res.solicitudes.filter(s => s.estado === 'Aprob Responsable');
+  const stats = document.getElementById('statsValid');
+  stats.innerHTML = `
+    <div class="stat-card"><div class="stat-number">${pendientes.length}</div><div class="stat-label">Por Validar</div></div>
+    <div class="stat-card"><div class="stat-number">${res.solicitudes.filter(s=>s.estado==='Aprob Validador').length}</div><div class="stat-label">Validadas</div></div>
+    <div class="stat-card"><div class="stat-number">${res.solicitudes.filter(s=>s.estado==='Ejecutado').length}</div><div class="stat-label">Ejecutadas</div></div>
+  `;
+
+  if (!pendientes.length) { tbody.innerHTML = '<tr><td colspan="10" class="loading-msg text-muted">Sin pendientes</td></tr>'; return; }
+
+  tbody.innerHTML = pendientes.map(s => `
+    <tr>
+      <td><code>${s.id}</code></td>
+      <td>${s.usuarioNombre}</td>
+      <td>${s.responsableNombre || '—'}</td>
+      <td>${s.origen}</td>
+      <td>${s.destino}</td>
+      <td>${fmtFecha(s.fechaServicio)}</td>
+      <td>${fmtHora(s.horaServicio)}</td>
+      <td>${s.aprobRespNombre || '—'}</td>
+      <td>${estadoBadge(s.estado)}</td>
+      <td class="actions-col">
+        <button class="btn btn-outline btn-sm" onclick="verDetalle(${JSON.stringify(s).replace(/"/g,'&quot;')})">Ver</button>
+        <button class="btn btn-success btn-sm" onclick="abrirAprobarValid('aprobar','${s.id}')">Aprobar</button>
+        <button class="btn btn-danger btn-sm" onclick="abrirAprobarValid('rechazar','${s.id}')">Rechazar</button>
+        <button class="btn btn-warning btn-sm" onclick="abrirAnular('${s.id}')">Anular</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirAprobarValid(action, solicitudId) {
+  accionValidActual = { action, solicitudId };
+  const esAprobar = action === 'aprobar';
+  document.getElementById('titleAprobarValid').textContent = esAprobar ? 'Validar Solicitud' : 'Rechazar en Validación';
+  document.getElementById('txtAprobarValid').textContent = esAprobar
+    ? '¿Confirma la validación de esta solicitud?'
+    : '¿Confirma el rechazo de esta solicitud?';
+  document.getElementById('motivoValidGrp').style.display = esAprobar ? 'none' : 'flex';
+  document.getElementById('motivoValid').value = '';
+  const btn = document.getElementById('btnConfirmValid');
+  btn.textContent = esAprobar ? 'Validar' : 'Rechazar';
+  btn.className = 'btn ' + (esAprobar ? 'btn-success' : 'btn-danger');
+  document.getElementById('aprobarValidAlert').innerHTML = '';
+  abrirModal('modalAprobarValid');
+}
+
+async function confirmarAccionValid() {
+  const { action, solicitudId } = accionValidActual;
+  const motivo = document.getElementById('motivoValid').value.trim();
+  if (action === 'rechazar' && !motivo) { showAlert('aprobarValidAlert', 'Ingresa el motivo'); return; }
+  const actionName = action === 'aprobar' ? 'aprobarValidador' : 'rechazarValidador';
+  const res = await api({ action: actionName, solicitudId, aprobadorId: usuario.id, aprobadorNombre: usuario.nombre, motivo });
+  if (!res.ok) { showAlert('aprobarValidAlert', res.error); return; }
+  cerrarModal('modalAprobarValid');
+  cargarPendientesValid();
+}
+
+// ──────────────────────────────────────────────
+// CONTROL / GARITA
+// ──────────────────────────────────────────────
+async function cargarControl() {
+  const tbody = document.getElementById('bodyControl');
+  tbody.innerHTML = '<tr><td colspan="10" class="loading-msg"><div class="spinner"></div></td></tr>';
+  const filtro = document.getElementById('filtroEstadoControl')?.value || 'Todos';
+
+  const res = await api({ action: 'getSolicitudes', usuarioId: usuario.id, perfil: usuario.perfil, filtroEstado: filtro });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="10">${res.error}</td></tr>`; return; }
+
+  const porValidar = res.solicitudes.filter(s => s.estado === 'Aprob Validador');
+  const stats = document.getElementById('statsControl');
+  stats.innerHTML = `
+    <div class="stat-card"><div class="stat-number">${porValidar.length}</div><div class="stat-label">Por Ejecutar</div></div>
+    <div class="stat-card"><div class="stat-number">${res.solicitudes.filter(s=>s.estado==='Ejecutado').length}</div><div class="stat-label">Ejecutados</div></div>
+  `;
+
+  if (!res.solicitudes.length) { tbody.innerHTML = '<tr><td colspan="10" class="loading-msg text-muted">Sin servicios</td></tr>'; return; }
+
+  tbody.innerHTML = res.solicitudes.map(s => `
+    <tr>
+      <td><code>${s.id}</code></td>
+      <td>${s.usuarioNombre}</td>
+      <td>${s.origen}</td>
+      <td>${s.destino}</td>
+      <td>${fmtFecha(s.fechaServicio)}</td>
+      <td>${fmtHora(s.horaServicio)}</td>
+      <td>${estadoBadge(s.estado)}</td>
+      <td>${s.chofer || '—'}</td>
+      <td>${s.placa || '—'}</td>
+      <td class="actions-col">
+        <button class="btn btn-outline btn-sm" onclick="verDetalle(${JSON.stringify(s).replace(/"/g,'&quot;')})">Ver</button>
+        ${s.estado === 'Aprob Validador' ? `<button class="btn btn-primary btn-sm" onclick="abrirEjecutar(${JSON.stringify(s).replace(/"/g,'&quot;')})">Ejecutar</button>` : ''}
+        <button class="btn btn-warning btn-sm" onclick="abrirAnular('${s.id}')">Anular</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirEjecutar(sol) {
+  solicitudEjecutar = sol;
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('ejFecha').value = hoy;
+  document.getElementById('ejHora').value = '';
+  document.getElementById('ejChofer').value = '';
+  document.getElementById('ejPlaca').value = '';
+  document.getElementById('ejObs').value = '';
+  document.getElementById('ejecutarAlert').innerHTML = '';
+  abrirModal('modalEjecutar');
+}
+
+async function confirmarEjecucion() {
+  const fechaEjecucion = document.getElementById('ejFecha').value;
+  const horaEjecucion = document.getElementById('ejHora').value;
+  const chofer = document.getElementById('ejChofer').value.trim();
+  const placa = document.getElementById('ejPlaca').value.trim();
+  const observaciones = document.getElementById('ejObs').value.trim();
+
+  if (!fechaEjecucion || !horaEjecucion || !chofer || !placa) {
+    showAlert('ejecutarAlert', 'Completa todos los campos requeridos (*)');
+    return;
+  }
+  const res = await api({
+    action: 'ejecutarServicio',
+    solicitudId: solicitudEjecutar.id,
+    fechaEjecucion, horaEjecucion, chofer, placa, observaciones,
+    controlId: usuario.id, controlNombre: usuario.nombre
+  });
+  if (!res.ok) { showAlert('ejecutarAlert', res.error); return; }
+  cerrarModal('modalEjecutar');
+  cargarControl();
+}
+
+// ──────────────────────────────────────────────
+// PROVEEDOR
+// ──────────────────────────────────────────────
+async function cargarProveedor() {
+  const tbody = document.getElementById('bodyProv');
+  tbody.innerHTML = '<tr><td colspan="10" class="loading-msg"><div class="spinner"></div></td></tr>';
+
+  const res = await api({ action: 'getSolicitudes', usuarioId: usuario.id, perfil: 'Proveedor' });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="10">${res.error}</td></tr>`; return; }
+
+  if (!res.solicitudes.length) { tbody.innerHTML = '<tr><td colspan="10" class="loading-msg text-muted">Sin servicios ejecutados</td></tr>'; return; }
+
+  tbody.innerHTML = res.solicitudes.map(s => `
+    <tr>
+      <td><code>${s.id}</code></td>
+      <td>${s.usuarioNombre}</td>
+      <td>${s.origen}</td>
+      <td>${s.destino}</td>
+      <td>${fmtFecha(s.fechaServicio)}</td>
+      <td>${fmtFecha(s.fechaEjecucion)}</td>
+      <td>${s.chofer}</td>
+      <td>${s.placa}</td>
+      <td>${s.costo ? 'S/. ' + parseFloat(s.costo).toFixed(2) : '<span class="text-muted">Sin costo</span>'}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="abrirCosto(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+          ${s.costo ? 'Editar costo' : 'Registrar costo'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirCosto(sol) {
+  solicitudCosto = sol;
+  document.getElementById('inpCosto').value = sol.costo || '';
+  document.getElementById('costoAlert').innerHTML = '';
+  abrirModal('modalCosto');
+}
+
+async function confirmarCosto() {
+  const costo = document.getElementById('inpCosto').value;
+  if (!costo || isNaN(parseFloat(costo))) { showAlert('costoAlert', 'Ingresa un costo válido'); return; }
+  const res = await api({ action: 'setCosto', solicitudId: solicitudCosto.id, costo, proveedorNombre: usuario.nombre });
+  if (!res.ok) { showAlert('costoAlert', res.error); return; }
+  cerrarModal('modalCosto');
+  cargarProveedor();
+}
+
+// ──────────────────────────────────────────────
+// ADMINISTRADOR
+// ──────────────────────────────────────────────
+async function cargarUsuarios() {
+  const tbody = document.getElementById('bodyAdmin');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading-msg"><div class="spinner"></div></td></tr>';
+
+  const res = await api({ action: 'getUsuarios' });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="8">${res.error}</td></tr>`; return; }
+
+  tbody.innerHTML = res.usuarios.map(u => `
+    <tr>
+      <td>${u.nombre}</td>
+      <td>${u.username}</td>
+      <td><span class="estado estado-resp">${u.perfil}</span></td>
+      <td>${u.jefaturaNombre || '—'}</td>
+      <td>${u.responsableNombre || '—'}</td>
+      <td>${u.puedeDescargar ? '✅' : '❌'}</td>
+      <td>${u.activo ? '✅' : '❌'}</td>
+      <td class="actions-col">
+        <button class="btn btn-outline btn-sm" onclick="abrirModalUsuario(${JSON.stringify(u).replace(/"/g,'&quot;')})">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="desactivarUsuario(${u.rowIndex})">Desactivar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function cargarTodasSolicitudes() {
+  const tbody = document.getElementById('bodyAdminSol');
+  tbody.innerHTML = '<tr><td colspan="9" class="loading-msg"><div class="spinner"></div></td></tr>';
+  const filtro = document.getElementById('filtroEstadoAdmin')?.value || 'Todos';
+
+  const res = await api({ action: 'getSolicitudes', usuarioId: usuario.id, perfil: 'Administrador', filtroEstado: filtro });
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="9">${res.error}</td></tr>`; return; }
+
+  if (!res.solicitudes.length) { tbody.innerHTML = '<tr><td colspan="9" class="loading-msg text-muted">Sin solicitudes</td></tr>'; return; }
+
+  tbody.innerHTML = res.solicitudes.map(s => `
+    <tr>
+      <td><code>${s.id}</code></td>
+      <td>${s.usuarioNombre}</td>
+      <td>${s.responsableNombre || '—'}</td>
+      <td>${s.origen}</td>
+      <td>${s.destino}</td>
+      <td>${fmtFecha(s.fechaServicio)}</td>
+      <td>${estadoBadge(s.estado)}</td>
+      <td>${s.costo ? 'S/. ' + parseFloat(s.costo).toFixed(2) : '—'}</td>
+      <td class="actions-col">
+        <button class="btn btn-outline btn-sm" onclick="verDetalle(${JSON.stringify(s).replace(/"/g,'&quot;')})">Ver</button>
+        ${s.estado === 'En Proceso' ? `<button class="btn btn-success btn-sm" onclick="abrirAprobarResp('aprobar','${s.id}')">Aprobar Resp.</button>` : ''}
+        ${s.estado === 'Aprob Responsable' ? `<button class="btn btn-success btn-sm" onclick="abrirAprobarValid('aprobar','${s.id}')">Validar</button>` : ''}
+        ${s.estado === 'Aprob Validador' ? `<button class="btn btn-primary btn-sm" onclick="abrirEjecutar(${JSON.stringify(s).replace(/"/g,'&quot;')})">Ejecutar</button>` : ''}
+        <button class="btn btn-warning btn-sm" onclick="abrirAnular('${s.id}')">Anular</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Modal usuario
+function abrirModalUsuario(usr) {
+  usuarioEditando = usr;
+  document.getElementById('titleModalUsuario').textContent = usr ? 'Editar Usuario' : 'Nuevo Usuario';
+  document.getElementById('usrNombre').value = usr?.nombre || '';
+  document.getElementById('usrUsername').value = usr?.username || '';
+  document.getElementById('usrPassword').value = usr?.password || '';
+  document.getElementById('usrPerfil').value = usr?.perfil || '';
+  document.getElementById('usrDescargar').value = usr?.puedeDescargar ? 'true' : 'false';
+  document.getElementById('usrActivo').value = usr?.activo !== false ? 'true' : 'false';
+  document.getElementById('usuarioAlert').innerHTML = '';
+
+  // Cargar combos
+  const jefSel = document.getElementById('usrJefatura');
+  const respSel = document.getElementById('usrResponsable');
+  jefSel.innerHTML = '<option value="">-- Ninguna --</option>';
+  respSel.innerHTML = '<option value="">-- Ninguno --</option>';
+
+  (catalogos.jefaturas || []).forEach(j => {
+    jefSel.innerHTML += `<option value="${j.id}" data-resp-id="${j.responsableId||''}" data-resp-nombre="${j.responsableNombre||''}">${j.nombre}</option>`;
+  });
+  (catalogos.responsables || []).forEach(r => {
+    respSel.innerHTML += `<option value="${r.id}">${r.nombre}</option>`;
+  });
+
+  if (usr?.jefaturaId) jefSel.value = usr.jefaturaId;
+  if (usr?.responsableId) respSel.value = usr.responsableId;
+  onPerfilChange();
+  abrirModal('modalUsuario');
+}
+
+function onPerfilChange() {
+  const perfil = document.getElementById('usrPerfil').value;
+  const showJef = ['Usuario', 'Jefatura'].includes(perfil);
+  const showResp = ['Jefatura', 'Responsable'].includes(perfil);
+  document.getElementById('grpJefatura').style.display = showJef ? 'flex' : 'none';
+  document.getElementById('grpResponsable').style.display = showResp ? 'flex' : 'none';
+}
+
+function onJefaturaChange() {
+  const sel = document.getElementById('usrJefatura');
+  const opt = sel.options[sel.selectedIndex];
+  const respId = opt?.dataset?.respId || '';
+  const respNombre = opt?.dataset?.respNombre || '';
+  const respSel = document.getElementById('usrResponsable');
+  if (respId) respSel.value = respId;
+}
+
+async function guardarUsuario() {
+  const nombre = document.getElementById('usrNombre').value.trim();
+  const username = document.getElementById('usrUsername').value.trim();
+  const password = document.getElementById('usrPassword').value.trim();
+  const perfil = document.getElementById('usrPerfil').value;
+
+  if (!nombre || !username || !password || !perfil) {
+    showAlert('usuarioAlert', 'Completa todos los campos requeridos (*)');
+    return;
+  }
+
+  const jefSel = document.getElementById('usrJefatura');
+  const respSel = document.getElementById('usrResponsable');
+  const jefaturaId = jefSel.value;
+  const jefaturaNombre = jefSel.options[jefSel.selectedIndex]?.text?.replace('-- Ninguna --','') || '';
+  const responsableId = respSel.value;
+  const responsableNombre = respSel.options[respSel.selectedIndex]?.text?.replace('-- Ninguno --','') || '';
+
+  const params = {
+    action: 'guardarUsuario',
+    id: usuarioEditando?.id || '',
+    nombre, username, password, perfil,
+    jefaturaId, jefaturaNombre, responsableId, responsableNombre,
+    puedeDescargar: document.getElementById('usrDescargar').value === 'true',
+    activo: document.getElementById('usrActivo').value === 'true',
+    rowIndex: usuarioEditando?.rowIndex || null
+  };
+
+  const res = await api(params);
+  if (!res.ok) { showAlert('usuarioAlert', res.error || 'Error al guardar'); return; }
+  cerrarModal('modalUsuario');
+  await cargarCatalogos();
+  cargarUsuarios();
+}
+
+async function desactivarUsuario(rowIndex) {
+  if (!confirm('¿Desactivar este usuario?')) return;
+  const res = await api({ action: 'eliminarUsuario', rowIndex });
+  if (!res.ok) { alert(res.error); return; }
+  cargarUsuarios();
+}
+
+// ──────────────────────────────────────────────
+// REPORTE
+// ──────────────────────────────────────────────
+async function generarReporte() {
+  const desde = document.getElementById('repDesde').value;
+  const hasta = document.getElementById('repHasta').value;
+  if (!desde || !hasta) { showAlert('repAlert', 'Selecciona el rango de fechas'); return; }
+  if (desde > hasta) { showAlert('repAlert', 'La fecha desde no puede ser mayor a la fecha hasta'); return; }
+
+  showAlert('repAlert', '⏳ Generando reporte...', 'info');
+  const res = await api({ action: 'getReporte', fechaDesde: desde, fechaHasta: hasta, usuarioId: usuario.id, perfil: usuario.perfil });
+  if (!res.ok) { showAlert('repAlert', res.error); return; }
+
+  if (!res.solicitudes.length) { showAlert('repAlert', 'No hay datos para el rango seleccionado', 'info'); return; }
+
+  exportarExcel(res.solicitudes, desde, hasta);
+  showAlert('repAlert', `✅ Reporte generado: ${res.solicitudes.length} registros`, 'success');
+}
+
+function exportarExcel(solicitudes, desde, hasta) {
+  const headers = [
+    'ID', 'Fecha Solicitud', 'Solicitante', 'Jefatura', 'Responsable',
+    'Origen', 'Destino', 'Fecha Servicio', 'Hora Servicio', 'Estado',
+    'Aprob. Responsable', 'Fecha Aprob. Resp.',
+    'Aprob. Validador', 'Fecha Aprob. Valid.',
+    'Fecha Ejecución', 'Hora Ejecución', 'Chofer', 'Placa', 'Observaciones Control',
+    'Costo (S/.)', 'Fecha Costo', 'Proveedor'
+  ];
+
+  const rows = solicitudes.map(s => [
+    s.id, s.fechaSolicitud, s.usuarioNombre, s.jefaturaNombre, s.responsableNombre,
+    s.origen, s.destino, s.fechaServicio, s.horaServicio, s.estado,
+    s.aprobRespNombre, s.fechaAprobResp,
+    s.aprobValidNombre, s.fechaAprobValid,
+    s.fechaEjecucion, s.horaEjecucion, s.chofer, s.placa, s.obsControl,
+    s.costo, s.fechaCosto, s.proveedorNombre
+  ]);
+
+  // Crear CSV
+  const csv = [headers, ...rows].map(r =>
+    r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Reporte_Taxis_${desde}_${hasta}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ──────────────────────────────────────────────
+// DETALLE DE SOLICITUD
+// ──────────────────────────────────────────────
+function verDetalle(sol) {
+  const rows = [
+    ['ID', sol.id],
+    ['Fecha Solicitud', sol.fechaSolicitud],
+    ['Solicitante', sol.usuarioNombre],
+    ['Jefatura', sol.jefaturaNombre || '—'],
+    ['Responsable', sol.responsableNombre || '—'],
+    ['Origen', sol.origen],
+    ['Destino', sol.destino],
+    ['Fecha de Servicio', fmtFecha(sol.fechaServicio)],
+    ['Hora de Servicio', sol.horaServicio],
+    ['Estado', estadoBadge(sol.estado)],
+    ['─ Aprobación Responsable ─', ''],
+    ['Aprobado por', sol.aprobRespNombre || '—'],
+    ['Fecha Aprobación', sol.fechaAprobResp || '—'],
+    ['─ Aprobación Validador ─', ''],
+    ['Validado por', sol.aprobValidNombre || '—'],
+    ['Fecha Validación', sol.fechaAprobValid || '—'],
+    ['─ Ejecución ─', ''],
+    ['Fecha Ejecución', sol.fechaEjecucion || '—'],
+    ['Hora Ejecución', sol.horaEjecucion || '—'],
+    ['Chofer', sol.chofer || '—'],
+    ['Placa', sol.placa || '—'],
+    ['Observaciones', sol.obsControl || '—'],
+    ['─ Costo ─', ''],
+    ['Costo (S/.)', sol.costo ? parseFloat(sol.costo).toFixed(2) : '—'],
+    ['Proveedor', sol.proveedorNombre || '—'],
+  ];
+
+  document.getElementById('detalleBody').innerHTML = `
+    <table style="width:100%;font-size:13px">
+      ${rows.map(([k,v]) => k.startsWith('─') ?
+        `<tr><td colspan="2" style="padding:8px 0 4px;font-weight:600;color:var(--primary);font-size:12px">${k}</td></tr>` :
+        `<tr><td style="padding:5px 0;color:var(--gray);width:45%;font-weight:500">${k}</td><td style="padding:5px 0">${v}</td></tr>`
+      ).join('')}
+    </table>
+  `;
+  abrirModal('modalDetalle');
+}
+
+
+// ──────────────────────────────────────────────
+// ANULACIÓN
+// ──────────────────────────────────────────────
+let solicitudAnular = null;
+
+function abrirAnular(solicitudId) {
+  solicitudAnular = solicitudId;
+  document.getElementById('motivoAnular').value = '';
+  document.getElementById('anularAlert').innerHTML = '';
+  abrirModal('modalAnular');
+}
+
+async function confirmarAnular() {
+  const motivo = document.getElementById('motivoAnular').value.trim();
+  if (!motivo) { showAlert('anularAlert', 'Ingresa el motivo de anulación'); return; }
+  const res = await api({
+    action: 'anularServicio',
+    solicitudId: solicitudAnular,
+    usuarioId: usuario.id,
+    usuarioNombre: usuario.nombre,
+    motivo
+  });
+  if (!res.ok) { showAlert('anularAlert', res.error); return; }
+  cerrarModal('modalAnular');
+  // Recargar la vista activa
+  const tabActivo = document.querySelector('.tab.active');
+  if (tabActivo) cargarPaginaActiva(tabActivo.dataset.page);
+}
+
+// Cerrar modales con Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+</script>
+</body>
+</html>
